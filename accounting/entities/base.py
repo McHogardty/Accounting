@@ -1,8 +1,8 @@
 
-from abc import abstractmethod, abstractproperty
+from abc import abstractclassmethod, abstractmethod, abstractproperty
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, Iterable, List, TypeVar
 from uuid import UUID
 
 A = TypeVar('A')
@@ -49,6 +49,28 @@ class Entity:
         return '{}(id={}{}{})'.format(self.__class__.__name__, self.id,
                                       ', ' if properties else '',
                                       ', '.join(properties))
+
+
+class Factory:
+    @abstractclassmethod
+    def nil(cls):
+        pass
+
+    @classmethod
+    def replay(cls, events: List[Event[A]]) -> A:
+        aggregate = cls.nil()
+
+        for event in events:
+            aggregate = event.apply(aggregate)
+
+        return aggregate
+
+    @classmethod
+    def apply(cls, aggregate: A, events: List[Event[A]]) -> A:
+        for event in events:
+            aggregate = event.apply(aggregate)
+
+        return aggregate
 
 
 I = TypeVar('I')

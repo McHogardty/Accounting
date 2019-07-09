@@ -6,7 +6,7 @@ from enum import auto, Enum
 from typing import List
 from uuid import UUID
 
-from .base import Entity, Event
+from .base import Entity, Event, Factory
 
 
 class Account(Entity):
@@ -36,22 +36,10 @@ class Account(Entity):
                                expected_version=self.version + 1)]
 
 
-class AccountFactory:
+class AccountFactory(Factory):
     @classmethod
-    def replay(cls, events: List[Event[Account]]) -> Account:
-        account = Account.nil()
-
-        for event in events:
-            account = event.apply(account)
-
-        return account
-
-    @classmethod
-    def apply(cls, account: Account, events: List[Event[Account]]) -> Account:
-        for event in events:
-            account = event.apply(account)
-
-        return account
+    def nil(cls):
+        return Account.nil()
 
 
 @dataclass
