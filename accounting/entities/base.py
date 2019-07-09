@@ -1,15 +1,32 @@
 
-from abc import abstractclassmethod, abstractmethod, abstractproperty
+from abc import abstractmethod, abstractproperty
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Generic, Iterable, List, TypeVar
 from uuid import UUID
 
-A = TypeVar('A')
-
 
 @dataclass
-class Event(Generic[A]):
+class Entity:
+    id: UUID
+    version: int
+
+    def __repr__(self) -> str:
+        properties = ['='.join((k, repr(v))) for k, v in self.__dict__.items()
+                      if k != 'id']
+        properties.sort()
+        return '{}(id={}{}{})'.format(self.__class__.__name__, self.id,
+                                      ', ' if properties else '',
+                                      ', '.join(properties))
+
+
+A = TypeVar('A', bound=Entity)
+
+
+# Mypy does not like generic types which are bound by abstract classes like
+# data classes.
+@dataclass
+class Event(Generic[A]):  # type: ignore
     class VersionConflict(Exception):
         pass
 
@@ -38,21 +55,9 @@ class Event(Generic[A]):
         return '{}({})'.format(self.__class__.__name__, ', '.join(properties))
 
 
-@dataclass
-class Entity:
-    version: int
-
-    def __repr__(self) -> str:
-        properties = ['='.join((k, repr(v))) for k, v in self.__dict__.items()
-                      if k != 'id']
-        properties.sort()
-        return '{}(id={}{}{})'.format(self.__class__.__name__, self.id,
-                                      ', ' if properties else '',
-                                      ', '.join(properties))
-
-
 class Factory:
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def nil(cls):
         pass
 

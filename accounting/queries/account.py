@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import auto, Enum
+from typing import List
 from uuid import UUID
 
 from ..entities.account import AccountCreated, AccountCredited, AccountDebited
@@ -22,7 +23,7 @@ class Transaction:
 class Account:
     def __init__(self, id: UUID):
         self.id = id
-        self.transactions = []
+        self.transactions: List[Transaction] = []
         self.balance = Decimal('0')
 
     def credit(self, reference: str, amount: Decimal):
@@ -44,7 +45,7 @@ class Account:
 
 
 class AccountReadModel:
-    class DoesNotExist:
+    class DoesNotExist(Exception):
         pass
 
     def __init__(self):
