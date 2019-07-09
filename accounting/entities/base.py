@@ -1,18 +1,35 @@
 
 from abc import abstractmethod, abstractproperty
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Generic, Iterable, TypeVar
 from uuid import UUID
 
 A = TypeVar('A')
 
 
+@dataclass
 class Event(Generic[A]):
+    class VersionConflict(Exception):
+        pass
+
+    expected_version: int
+
     @abstractproperty
     def aggregate_id(self) -> UUID:
         pass
 
+    def apply(self, aggregate: A) -> A:
+        if self.expected_version != aggregate.version + 1:
+            raise Event.VersionConflict
+
+        new_aggregate = deepcopy(aggregate)
+        self.apply_changes(new_aggregate)
+        new_aggregate.version += 1
+        return new_aggregate
+
     @abstractmethod
-    def apply(aggregate: A) -> A:
+    def apply_changes(self, aggregate: A):
         pass
 
     def __repr__(self) -> str:
@@ -21,7 +38,10 @@ class Event(Generic[A]):
         return '{}({})'.format(self.__class__.__name__, ', '.join(properties))
 
 
+@dataclass
 class Entity:
+    version: int
+
     def __repr__(self) -> str:
         properties = ['='.join((k, repr(v))) for k, v in self.__dict__.items()
                       if k != 'id']

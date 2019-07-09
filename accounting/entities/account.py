@@ -17,20 +17,23 @@ class Account(Entity):
     def __init__(self):
         self.id: UUID = None
         self.balance: Decimal = Decimal('0')
+        self.version = 0
 
     def credit(self,
                reference: str,
                amount: Decimal) -> List[Event['Account']]:
         return [AccountCredited(account_id=self.id,
                                 reference=reference,
-                                amount=amount)]
+                                amount=amount,
+                                expected_version=self.version + 1)]
 
     def debit(self,
               reference: str,
               amount: Decimal) -> List[Event['Account']]:
         return [AccountDebited(account_id=self.id,
                                reference=reference,
-                               amount=amount)]
+                               amount=amount,
+                               expected_version=self.version + 1)]
 
 
 class AccountFactory:
@@ -59,11 +62,8 @@ class AccountCreated(Event[Account]):
     def aggregate_id(self):
         return self.account_id
 
-    def apply(self, account: Account) -> Account:
-        new_account = deepcopy(account)
-        new_account.id = self.aggregate_id
-
-        return new_account
+    def apply_changes(self, account: Account):
+        account.id = self.aggregate_id
 
 
 @dataclass
@@ -76,11 +76,8 @@ class AccountCredited(Event[Account]):
     def aggregate_id(self):
         return self.account_id
 
-    def apply(self, account: Account) -> Account:
-        new_account = deepcopy(account)
-        new_account.balance += self.amount
-
-        return new_account
+    def apply_changes(self, account: Account):
+        account.balance += self.amount
 
 
 @dataclass
@@ -93,11 +90,8 @@ class AccountDebited(Event[Account]):
     def aggregate_id(self):
         return self.account_id
 
-    def apply(self, account: Account) -> Account:
-        new_account = deepcopy(account)
-        new_account.balance -= self.amount
-
-        return new_account
+    def apply_changes(self, account: Account):
+        account.balance -= self.amount
 
 
 class AccountRepository:
@@ -128,7 +122,8 @@ class AccountService:
         if self.repository.exists(account_id=account_id):
             raise AccountService.AccountAlreadyExists
 
-        self.repository.add(events=[AccountCreated(account_id=account_id)])
+        self.repository.add(events=[AccountCreated(account_id=account_id,
+                                                   expected_version=1)])
 
     def credit(self,
                account_id: UUID,
